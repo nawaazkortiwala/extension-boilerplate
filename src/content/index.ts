@@ -1,36 +1,46 @@
+import { sendMessage } from "../shared/messenger";
+
+function injectCustomScript() {
+  const script = document.createElement("script");
+  script.src = chrome.runtime.getURL("content/inject.js");
+  script.type = "text/javascript";
+  script.onload = () => {
+    script.remove(); // Clean up after injection
+  };
+  (document.head || document.documentElement).appendChild(script);
+}
+
 function observeChat() {
-  // adjust selector to match the chat container
-  const chatContainer = document.querySelector(".chat-messages-container");
+  const chatContainer = document.querySelector(".chat-container");
   if (!chatContainer) return;
 
   const observer = new MutationObserver((mutations) => {
-    mutations.forEach((m) => {
-      m.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement && node.matches(".incoming-message-selector")) {
-          const text = node.innerText.trim();
-          chrome.runtime.sendMessage({ type: "SEND_TO_API", payload: text }, (response) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "childList") {
+        const newMessage = mutation.addedNodes[0] as HTMLElement;
+        if (newMessage && newMessage.classList.contains("message")) {
+          const text = newMessage.textContent;
+          sendMessage({ type: "SEND_TO_API", payload: text }).then((response) => {
             if (response?.response) {
               injectReply(response.response);
             }
           });
         }
-      });
+      }
     });
   });
 
-  observer.observe(chatContainer, { childList: true, subtree: true });
+  observer.observe(chatContainer, { childList: true });
 }
 
 function injectReply(reply: string) {
-  // adjust selectors to match the input box and send button
-  const input = document.querySelector(".chat-input-selector") as HTMLTextAreaElement;
-  const sendBtn = document.querySelector(".chat-send-button-selector") as HTMLElement;
-
-  if (input && sendBtn) {
-    input.value = reply;
-    sendBtn.click();
-  }
+  const replyElement = document.createElement("div");
+  replyElement.className = "reply";
+  replyElement.textContent = reply;
+  document.querySelector(".chat-container")?.appendChild(replyElement);
 }
 
-// start observing on load
+// Inject the custom script when the content script runs
+injectCustomScript();
+
 observeChat();

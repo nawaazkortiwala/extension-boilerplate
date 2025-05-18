@@ -32,3 +32,6 @@ Desktop.ini
 # Build temp
 temp/
 tmp/
+
+# Environment variables
+.env

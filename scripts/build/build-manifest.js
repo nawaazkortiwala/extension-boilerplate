@@ -1,11 +1,17 @@
 import { writeFile } from "fs/promises";
 import { resolve } from "path";
 import { distDirName } from "./config.js";
+import dotenv from "dotenv";
 // @ts-check
 // eslint-disable-next-line no-unused-vars
 /// <reference path="../types.js" />
 
-const BASE_URL = "https://example.com/*";
+dotenv.config();
+
+const BASE_URL = process.env.EXT_BASE_URL;
+if (!BASE_URL) {
+  throw new Error("EXT_BASE_URL environment variable is required but not set.");
+}
 
 /**
  * Generates the manifest.json file for the extension.
